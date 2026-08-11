@@ -1,0 +1,229 @@
+{
+  "name": "AI Resume Matching Pipeline",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "connections": {
+    "Gmail Trigger - Resume Email": {"main": [[{"node": "Normalize Email", "type": "main", "index": 0}]]},
+    "Normalize Email": {"main": [[{"node": "Read Existing Candidate by Email", "type": "main", "index": 0}]]},
+    "Read Existing Candidate by Email": {"main": [[{"node": "Is Duplicate Candidate?", "type": "main", "index": 0}]]},
+    "Is Duplicate Candidate?": {"main": [[{"node": "Stop Duplicate Candidate", "type": "main", "index": 0}], [{"node": "Attach Resume Binary", "type": "main", "index": 0}]]},
+    "Attach Resume Binary": {"main": [[{"node": "Extract Resume Text from PDF", "type": "main", "index": 0}]]},
+    "Extract Resume Text from PDF": {"main": [[{"node": "Extract Candidate Data", "type": "main", "index": 0}]]},
+    "OpenAI Model - Extraction": {"ai_languageModel": [[{"node": "Extract Candidate Data", "type": "ai_languageModel", "index": 0}]]},
+    "Extract Candidate Data": {"main": [[{"node": "Read Vacancies", "type": "main", "index": 0}]]},
+    "Read Vacancies": {"main": [[{"node": "Aggregate Vacancies", "type": "main", "index": 0}]]},
+    "Aggregate Vacancies": {"main": [[{"node": "Prepare Matching Input", "type": "main", "index": 0}]]},
+    "Prepare Matching Input": {"main": [[{"node": "Match Candidate to Vacancies", "type": "main", "index": 0}]]},
+    "OpenAI Model - Matching": {"ai_languageModel": [[{"node": "Match Candidate to Vacancies", "type": "ai_languageModel", "index": 0}]]},
+    "Structured Output Parser - Matching JSON": {"ai_outputParser": [[{"node": "Match Candidate to Vacancies", "type": "ai_outputParser", "index": 0}]]},
+    "Match Candidate to Vacancies": {"main": [[{"node": "Append Candidate to Sheet", "type": "main", "index": 0}]]},
+    "Append Candidate to Sheet": {"main": [[{"node": "Has Suitable Vacancy?", "type": "main", "index": 0}]]},
+    "Has Suitable Vacancy?": {"main": [[{"node": "Prepare Invite Recommendation", "type": "main", "index": 0}], [{"node": "Prepare Rejection Recommendation", "type": "main", "index": 0}]]}
+  },
+  "nodes": [
+    {
+      "id": "gmail-trigger",
+      "name": "Gmail Trigger - Resume Email",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [0, 320],
+      "parameters": {
+        "pollTimes": {"item": [{"mode": "everyHour"}]},
+        "authentication": "oAuth2",
+        "event": "messageReceived",
+        "simple": false,
+        "maxResults": 5,
+        "filters": {"q": "has:attachment filename:pdf", "readStatus": "unread"},
+        "options": {"downloadAttachments": true, "dataPropertyAttachmentsPrefixName": "attachment_"}
+      }
+    },
+    {
+      "id": "normalize-email",
+      "name": "Normalize Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [240, 320],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "options": {"stripBinary": false, "dotNotation": true},
+        "assignments": {"assignments": [
+          {"id": "sender-email", "name": "sender_email", "value": "={{ $json.from?.value?.[0]?.address ?? $json.from ?? '' }}", "type": "string"},
+          {"id": "sender-name", "name": "sender_name", "value": "={{ $json.from?.value?.[0]?.name ?? '' }}", "type": "string"},
+          {"id": "message-id", "name": "message_id", "value": "={{ $json.id ?? '' }}", "type": "string"},
+          {"id": "subject", "name": "email_subject", "value": "={{ $json.subject ?? '' }}", "type": "string"}
+        ]}
+      }
+    },
+    {
+      "id": "candidate-lookup",
+      "name": "Read Existing Candidate by Email",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [480, 320],
+      "alwaysOutputData": true,
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {"__rl": true, "mode": "id", "value": "REPLACE_WITH_GOOGLE_SHEET_ID"},
+        "sheetName": {"__rl": true, "mode": "name", "value": "Candidates"},
+        "options": {}
+      }
+    },
+    {
+      "id": "duplicate-check",
+      "name": "Is Duplicate Candidate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [720, 320],
+      "parameters": {
+        "conditions": {"options": {"caseSensitive": false, "typeValidation": "strict", "version": 3}, "conditions": [{"id": "duplicate", "leftValue": "={{ $json.sender_email ?? '' }}", "operator": {"type": "string", "operation": "notEmpty"}, "rightValue": ""}], "combinator": "and"},
+        "options": {}
+      }
+    },
+    {
+      "id": "duplicate-stop",
+      "name": "Stop Duplicate Candidate",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [960, 160],
+      "parameters": {"mode": "manual", "assignments": {"assignments": [{"id": "status", "name": "status", "value": "duplicate_skipped", "type": "string"}]}, "options": {}}
+    },
+    {
+      "id": "attach-pdf",
+      "name": "Attach Resume Binary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [960, 400],
+      "parameters": {"mode": "manual", "includeOtherFields": true, "options": {"stripBinary": false}}
+    },
+    {
+      "id": "extract-pdf",
+      "name": "Extract Resume Text from PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [1200, 400],
+      "parameters": {"operation": "pdf", "binaryPropertyName": "attachment_0", "options": {}}
+    },
+    {
+      "id": "candidate-extraction",
+      "name": "Extract Candidate Data",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [1440, 400],
+      "parameters": {
+        "text": "={{ $json.text ?? $json.data ?? '' }}",
+        "schemaType": "fromAttributes",
+        "attributes": {"attributes": [
+          {"name": "full_name", "description": "Candidate name", "required": false},
+          {"name": "email", "description": "Email from resume if present", "required": false},
+          {"name": "contact_phone", "description": "Phone if present", "required": false},
+          {"name": "country", "description": "Country", "required": false},
+          {"name": "city", "description": "City", "required": false},
+          {"name": "position", "description": "Target/current position", "required": false},
+          {"name": "employment", "description": "Employment preference", "required": false},
+          {"name": "experience", "description": "Relevant experience summary", "required": false},
+          {"name": "skills", "description": "Professional skills", "required": false},
+          {"name": "salary", "description": "Salary expectation if explicitly present", "required": false}
+        ]},
+        "options": {"systemPromptTemplate": "Extract only information explicitly present in the resume. Do not infer or invent missing facts."}
+      }
+    },
+    {
+      "id": "extraction-model",
+      "name": "OpenAI Model - Extraction",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [1440, 640],
+      "parameters": {"model": {"__rl": true, "mode": "list", "value": "gpt-5.4-mini", "cachedResultName": "gpt-5.4-mini"}, "options": {"temperature": 0.2, "maxTokens": 1200}}
+    },
+    {
+      "id": "vacancies-read",
+      "name": "Read Vacancies",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1680, 400],
+      "executeOnce": true,
+      "parameters": {"resource": "sheet", "operation": "read", "documentId": {"__rl": true, "mode": "id", "value": "REPLACE_WITH_GOOGLE_SHEET_ID"}, "sheetName": {"__rl": true, "mode": "name", "value": "Vacancies"}, "options": {}}
+    },
+    {
+      "id": "vacancies-aggregate",
+      "name": "Aggregate Vacancies",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1920, 400],
+      "parameters": {"aggregate": "aggregateAllItemData", "destinationFieldName": "vacancies", "options": {}}
+    },
+    {
+      "id": "prepare-matching",
+      "name": "Prepare Matching Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2160, 400],
+      "parameters": {"mode": "manual", "includeOtherFields": true, "options": {}}
+    },
+    {
+      "id": "matching-agent",
+      "name": "Match Candidate to Vacancies",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [2400, 400],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Candidate:\n{{ JSON.stringify($json.candidate_json ?? $json) }}\n\nVacancies:\n{{ JSON.stringify($json.vacancies ?? []) }}",
+        "options": {"systemMessage": "Evaluate professional fit only. Ignore protected or irrelevant personal characteristics. Score each vacancy from 0 to 100 and return reasons and risks. Do not make a final hiring decision."},
+        "hasOutputParser": true
+      }
+    },
+    {
+      "id": "matching-model",
+      "name": "OpenAI Model - Matching",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [2400, 640],
+      "parameters": {"model": {"__rl": true, "mode": "list", "value": "gpt-5.4-mini", "cachedResultName": "gpt-5.4-mini"}, "options": {"temperature": 0.3, "maxTokens": 2500}}
+    },
+    {
+      "id": "matching-parser",
+      "name": "Structured Output Parser - Matching JSON",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [2600, 640],
+      "parameters": {"jsonSchemaExample": "{\"matches\":[{\"vacancy\":\"Backend Engineer\",\"score\":78,\"reasons\":[\"Relevant experience\"],\"risks\":[\"Skill gap\"]}]}"}
+    },
+    {
+      "id": "append-candidate",
+      "name": "Append Candidate to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2700, 400],
+      "parameters": {"resource": "sheet", "operation": "append", "documentId": {"__rl": true, "mode": "id", "value": "REPLACE_WITH_GOOGLE_SHEET_ID"}, "sheetName": {"__rl": true, "mode": "name", "value": "Candidates"}, "options": {}}
+    },
+    {
+      "id": "suitable-vacancy",
+      "name": "Has Suitable Vacancy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [2940, 400],
+      "parameters": {"conditions": {"options": {"caseSensitive": true, "typeValidation": "strict", "version": 3}, "conditions": [{"id": "threshold", "leftValue": "={{ Math.max(...(($json.matches ?? []).map(m => Number(m.score) || 0)), 0) }}", "operator": {"type": "number", "operation": "gte"}, "rightValue": 60}], "combinator": "and"}, "options": {}}
+    },
+    {
+      "id": "invite-recommendation",
+      "name": "Prepare Invite Recommendation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3180, 280],
+      "parameters": {"mode": "manual", "assignments": {"assignments": [{"id": "status", "name": "review_recommendation", "value": "consider_for_interview", "type": "string"}]}, "options": {}}
+    },
+    {
+      "id": "reject-recommendation",
+      "name": "Prepare Rejection Recommendation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3180, 520],
+      "parameters": {"mode": "manual", "assignments": {"assignments": [{"id": "status", "name": "review_recommendation", "value": "no_strong_match", "type": "string"}]}, "options": {}}
+    }
+  ]
+}
