@@ -1,0 +1,16 @@
+{
+  "full_name": "Demo Candidate",
+  "position": "Automation Engineer",
+  "skills": ["n8n", "Python", "REST APIs", "webhooks", "LLM"],
+  "experience": "3 years in workflow automation and integrations",
+  "city": "Demo City",
+  "country": "Demo Country",
+  "matches": [
+    {
+      "vacancy": "Automation Engineer",
+      "score": 86,
+      "reasons": ["Strong n8n and API alignment", "Relevant automation experience"],
+      "risks": ["Production-scale ownership should be verified manually"]
+    }
+  ]
+}
