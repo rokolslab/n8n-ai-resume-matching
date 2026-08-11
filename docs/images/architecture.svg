@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="520" viewBox="0 0 1320 520" role="img" aria-labelledby="title desc">
+<title id="title">n8n AI Resume Matching architecture</title>
+<desc id="desc">Gmail receives a PDF resume, duplicate candidates are filtered before AI calls, PDF text is extracted, candidate data is structured, vacancies are loaded, AI matching returns structured results, and Google Sheets stores the result for human review.</desc>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#4b5563"/></marker><style>.b{fill:#fff;stroke:#374151;stroke-width:2;rx:12}.ai{fill:#f3f4f6;stroke:#111827;stroke-width:2;rx:12}.s{font-family:Arial,sans-serif;font-size:16px;fill:#111827;text-anchor:middle;dominant-baseline:middle}.m{font-family:Arial,sans-serif;font-size:13px;fill:#4b5563;text-anchor:middle}.l{stroke:#4b5563;stroke-width:2.3;fill:none;marker-end:url(#a)}</style></defs>
+<text x="660" y="36" style="font-family:Arial,sans-serif;font-size:28px;font-weight:700;fill:#111827;text-anchor:middle">n8n AI Resume Matching</text>
+<rect class="b" x="25" y="200" width="130" height="76"/><text class="s" x="90" y="225">Gmail</text><text class="m" x="90" y="252">PDF resume</text>
+<rect class="b" x="190" y="200" width="140" height="76"/><text class="s" x="260" y="225">Normalize</text><text class="m" x="260" y="252">email metadata</text>
+<rect class="b" x="365" y="200" width="145" height="76"/><text class="s" x="437" y="225">Duplicate</text><text class="m" x="437" y="252">check before AI</text>
+<rect class="b" x="545" y="200" width="145" height="76"/><text class="s" x="617" y="225">PDF extract</text><text class="m" x="617" y="252">deterministic text</text>
+<rect class="ai" x="725" y="200" width="150" height="76"/><text class="s" x="800" y="225">AI extraction</text><text class="m" x="800" y="252">candidate schema</text>
+<rect class="b" x="910" y="100" width="145" height="76"/><text class="s" x="982" y="125">Vacancies</text><text class="m" x="982" y="152">Google Sheets</text>
+<rect class="ai" x="910" y="300" width="145" height="76"/><text class="s" x="982" y="325">AI matching</text><text class="m" x="982" y="352">score + reasons</text>
+<rect class="b" x="1090" y="200" width="120" height="76"/><text class="s" x="1150" y="225">Persist</text><text class="m" x="1150" y="252">Candidates sheet</text>
+<rect class="b" x="1235" y="200" width="70" height="76"/><text class="s" x="1270" y="225">Human</text><text class="m" x="1270" y="252">review</text>
+<rect class="b" x="365" y="355" width="145" height="62"/><text class="s" x="437" y="380">Duplicate stop</text><text class="m" x="437" y="404">no AI cost</text>
+<path class="l" d="M155 238 H190"/><path class="l" d="M330 238 H365"/><path class="l" d="M510 238 H545"/><path class="l" d="M690 238 H725"/><path class="l" d="M875 238 C895 238 895 338 910 338"/><path class="l" d="M982 176 V300"/><path class="l" d="M1055 338 C1075 338 1075 238 1090 238"/><path class="l" d="M1210 238 H1235"/><path class="l" d="M437 276 V355"/>
+</svg>
